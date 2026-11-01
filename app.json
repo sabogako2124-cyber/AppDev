@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "BarberQueue",
@@ -9,8 +10,10 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {
-      "adaptiveIcon": {
+      "expo": {
+      "android": {
+        "softwareKeyboardLayoutMode": "resize",
+        "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
@@ -19,6 +22,13 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "@react-native-community/datetiepicker"
+    ]
+
+    
   }
 }
+}
+
