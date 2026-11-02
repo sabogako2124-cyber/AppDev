@@ -59,6 +59,88 @@ const DEFAULT_SCHEDULE = Object.fromEntries(
     }
   ])
 );
+const DEMO_SHOPS = [
+  {
+    id: "demo_shop_1",
+    isDemo: true,
+    name: "Classic Cuts Barbershop",
+    type: "Barbershop",
+    address: "BGC, Taguig City",
+    contactNumber: "0917 000 1001",
+    operatingHours: DEFAULT_SCHEDULE,
+    services: [
+      { id: "demo_service_1", name: "Classic Haircut", description: "Clean and classic haircut.", price: 120, durationMinutes: 30 },
+      { id: "demo_service_2", name: "Fade Haircut", description: "Modern fade haircut.", price: 180, durationMinutes: 45 },
+      { id: "demo_service_3", name: "Haircut and Shampoo", description: "Haircut with shampoo service.", price: 200, durationMinutes: 45 }
+    ]
+  },
+  {
+    id: "demo_shop_2",
+    isDemo: true,
+    name: "The Gentleman's Lounge",
+    type: "Barbershop",
+    address: "Market! Market!, Taguig City",
+    contactNumber: "0917 000 1002",
+    operatingHours: DEFAULT_SCHEDULE,
+    services: [
+      { id: "demo_service_4", name: "Premium Haircut", description: "Professional haircut service.", price: 250, durationMinutes: 45 },
+      { id: "demo_service_5", name: "Beard Trim", description: "Neat beard trimming.", price: 100, durationMinutes: 30 }
+    ]
+  },
+  {
+    id: "demo_shop_3",
+    isDemo: true,
+    name: "Urban Style Salon",
+    type: "Salon",
+    address: "Venice Grand Canal, Taguig City",
+    contactNumber: "0917 000 1003",
+    operatingHours: DEFAULT_SCHEDULE,
+    services: [
+      { id: "demo_service_6", name: "Haircut", description: "Basic haircut for all styles.", price: 180, durationMinutes: 45 },
+      { id: "demo_service_7", name: "Hair Treatment", description: "Sample hair treatment service.", price: 350, durationMinutes: 60 },
+      { id: "demo_service_8", name: "Hair Coloring", description: "Sample hair coloring service.", price: 600, durationMinutes: 90 }
+    ]
+  },
+  {
+    id: "demo_shop_4",
+    isDemo: true,
+    name: "Beauty Bloom Salon",
+    type: "Salon",
+    address: "Bonifacio High Street, Taguig City",
+    contactNumber: "0917 000 1004",
+    operatingHours: DEFAULT_SCHEDULE,
+    services: [
+      { id: "demo_service_9", name: "Women's Haircut", description: "Professional haircut service.", price: 250, durationMinutes: 45 },
+      { id: "demo_service_10", name: "Hair Spa", description: "Relaxing hair spa service.", price: 400, durationMinutes: 60 }
+    ]
+  },
+  {
+    id: "demo_shop_5",
+    isDemo: true,
+    name: "Fresh Look Barbershop",
+    type: "Barbershop",
+    address: "Pinagsama, Taguig City",
+    contactNumber: "0917 000 1005",
+    operatingHours: DEFAULT_SCHEDULE,
+    services: [
+      { id: "demo_service_11", name: "Regular Haircut", description: "Simple and clean haircut.", price: 100, durationMinutes: 30 },
+      { id: "demo_service_12", name: "Kids Haircut", description: "Haircut for kids.", price: 100, durationMinutes: 30 }
+    ]
+  },
+  {
+    id: "demo_shop_6",
+    isDemo: true,
+    name: "Glamour Hair Studio",
+    type: "Salon",
+    address: "McKinley Hill, Taguig City",
+    contactNumber: "0917 000 1006",
+    operatingHours: DEFAULT_SCHEDULE,
+    services: [
+      { id: "demo_service_13", name: "Hair Styling", description: "Everyday hair styling.", price: 300, durationMinutes: 45 },
+      { id: "demo_service_14", name: "Hair Rebond", description: "Sample hair rebond service.", price: 1500, durationMinutes: 180 }
+    ]
+  }
+];
 
 const formatDate = d =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -97,9 +179,12 @@ const makeSlotLockTimes = (startTime, durationMinutes) => {
 };
 
 export default function App() {
+
   const [screen, setScreen] = useState("login");
   const [shopSearch, setShopSearch] = useState("");
   const [shopTypeFilter, setShopTypeFilter] = useState("All");
+
+  
 
   const [serviceDescription, setServiceDescription] = useState("");
 
@@ -144,18 +229,80 @@ export default function App() {
   const [appointmentTime, setAppointmentTime] = useState("");
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [occupiedSlots, setOccupiedSlots] = useState([]);
+
+
+    const [loadingSlots, setLoadingSlots] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
 
+  // MY APPOINTMENTS STATES
   const [myAppointments, setMyAppointments] = useState([]);
-  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [appointmentFilter, setAppointmentFilter] = useState("All");
+
+  // APPOINTMENT SUMMARY
+  const appointmentSummary = {
+    total: myAppointments.length,
+
+    upcoming: myAppointments.filter(item =>
+      ["pending", "confirmed"].includes(
+        (item.status || "pending").toLowerCase()
+      )
+    ).length,
+
+    inProgress: myAppointments.filter(item =>
+      ["inqueue", "inservice"].includes(
+        (item.status || "").toLowerCase()
+      )
+    ).length,
+
+    completed: myAppointments.filter(item =>
+      (item.status || "").toLowerCase() === "completed"
+    ).length,
+
+    cancelled: myAppointments.filter(item =>
+      (item.status || "").toLowerCase() === "cancelled"
+    ).length
+  };
+
+  // APPOINTMENT FILTER
+  const filteredMyAppointments = myAppointments.filter(item => {
+    const status = (item.status || "pending").toLowerCase();
+
+    if (appointmentFilter === "Upcoming") {
+      return ["pending", "confirmed"].includes(status);
+    }
+
+    if (appointmentFilter === "In Progress") {
+      return ["inqueue", "inservice"].includes(status);
+    }
+
+    if (appointmentFilter === "Completed") {
+      return status === "completed";
+    }
+
+    if (appointmentFilter === "Cancelled") {
+      return status === "cancelled";
+    }
+
+    return true;
+  });
+
+  // OWNER APPOINTMENTS
   const [ownerAppointments, setOwnerAppointments] = useState([]);
+  
   const [loadingOwnerAppointments, setLoadingOwnerAppointments] = useState(false);
   const [confirmingAppointmentId, setConfirmingAppointmentId] = useState(null);
 
+  const [queueAppointments, setQueueAppointments] = useState([]);
+  const [loadingQueue, setLoadingQueue] = useState(false);
+  const [updatingQueueId, setUpdatingQueueId] = useState(null);
+
   const filteredShops = shops.filter(shop => {
   const search = shopSearch.toLowerCase();
+
 
   const matchesSearch =
     (shop.name || "").toLowerCase().includes(search) ||
@@ -460,6 +607,7 @@ async function handleLogin() {
       setAppointmentDate("");
       setAppointmentTime("");
       setAvailableSlots([]);
+      setOccupiedSlots([]);
       setMyAppointments([]);
       setEmail("");
       clearPasswords();
@@ -469,6 +617,18 @@ async function handleLogin() {
       Alert.alert("Error", "Unable to log out.");
     }
   }
+
+  // CUSTOMER: VIEW APPOINTMENT DETAILS
+// VIEW APPOINTMENT DETAILS
+function handleViewAppointmentDetails(item) {
+  setSelectedAppointment(item);
+
+  if (currentUser?.role === "owner") {
+    setScreen("ownerAppointmentDetails");
+  } else {
+    setScreen("appointmentDetails");
+  }
+}
 
 // CUSTOMER: LOAD APPOINTMENTS
 async function handleLoadMyAppointments() {
@@ -544,15 +704,169 @@ async function handleLoadOwnerAppointments() {
     setOwnerAppointments(bookings);
   } catch (e) {
     console.error("Load owner appointments error:", e);
-
-    Alert.alert(
-      "Unable to Load Appointments",
-      e.message || "Please check your Firestore rules and connection."
-    );
+    Alert.alert("Unable to Load Appointments", e.message || "Please try again.");
   } finally {
     setLoadingOwnerAppointments(false);
   }
 }
+
+// OWNER: LOAD QUEUE
+async function handleLoadQueue() {
+  if (!currentUser?.uid || currentUser.role !== "owner") {
+    Alert.alert("Access Denied", "Only shop owners can manage the queue.");
+    return;
+  }
+
+  setLoadingQueue(true);
+  setQueueAppointments([]);
+  setScreen("ownerQueue");
+
+  try {
+    const q = query(
+      collection(db, "appointments"),
+      where("establishmentId", "==", currentUser.uid)
+    );
+
+    const snap = await getDocs(q);
+
+    const bookings = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(item =>
+        ["confirmed", "inQueue", "inService"].includes(item.status)
+      );
+
+    bookings.sort((a, b) => {
+      const dateA = `${a.date || ""} ${a.time || ""}`;
+      const dateB = `${b.date || ""} ${b.time || ""}`;
+      return dateA.localeCompare(dateB);
+    });
+
+    setQueueAppointments(bookings);
+  } catch (e) {
+    console.error("Load queue error:", e);
+    Alert.alert("Unable to Load Queue", e.message || "Please try again.");
+  } finally {
+    setLoadingQueue(false);
+  }
+}
+
+// OWNER: UPDATE QUEUE STATUS
+
+
+async function handleUpdateQueueStatus(item, nextStatus) {
+  console.log("HANDLE UPDATE QUEUE STATUS CALLED");
+  console.log("APPOINTMENT:", item?.id);
+  console.log("NEXT STATUS:", nextStatus);
+
+  if (!currentUser?.uid || !item?.id) return;
+
+  setUpdatingQueueId(item.id);
+
+  try {
+    const appointmentRef = doc(db, "appointments", item.id);
+    let lockRefs = [];
+
+    // Find all locks belonging to this appointment
+    if (nextStatus === "completed") {
+      const lockQuery = query(
+        collection(db, "slotLocks"),
+        where("appointmentId", "==", item.id)
+      );
+
+      const lockSnap = await getDocs(lockQuery);
+
+      console.log("COMPLETING APPOINTMENT ID:", item.id);
+      console.log("LOCKS FOUND:", lockSnap.size);
+
+      lockSnap.docs.forEach(lockDoc => {
+        console.log("LOCK DOCUMENT:", lockDoc.id, lockDoc.data());
+      });
+
+      lockRefs = lockSnap.docs.map(lockDoc => lockDoc.ref);
+    }
+
+    // Update appointment and delete its locks
+    await runTransaction(db, async transaction => {
+      const appointmentSnap = await transaction.get(appointmentRef);
+
+      if (!appointmentSnap.exists()) {
+        throw new Error("APPOINTMENT_NOT_FOUND");
+      }
+
+      const appointment = appointmentSnap.data();
+
+      if (appointment.establishmentId !== currentUser.uid) {
+        throw new Error("NOT_YOUR_SHOP");
+      }
+
+      const allowedTransitions = {
+        confirmed: "inQueue",
+        inQueue: "inService",
+        inService: "completed"
+      };
+
+      if (allowedTransitions[appointment.status] !== nextStatus) {
+        throw new Error("INVALID_STATUS");
+      }
+
+      // Read lock documents before writing
+      const lockSnapshots = await Promise.all(
+        lockRefs.map(ref => transaction.get(ref))
+      );
+
+      transaction.update(appointmentRef, {
+        status: nextStatus,
+        queueUpdatedAt: serverTimestamp()
+      });
+
+      if (nextStatus === "completed") {
+        let deletedCount = 0;
+
+        lockSnapshots.forEach((lockSnap, index) => {
+          if (
+            lockSnap.exists() &&
+            lockSnap.data().appointmentId === item.id &&
+            lockSnap.data().establishmentId === currentUser.uid
+          ) {
+            console.log("DELETING LOCK:", lockRefs[index].id);
+            transaction.delete(lockRefs[index]);
+            deletedCount++;
+          }
+        });
+
+        console.log("LOCKS MARKED FOR DELETION:", deletedCount);
+      }
+    });
+
+    console.log("QUEUE TRANSACTION SUCCESSFUL:", item.id);
+
+    if (nextStatus === "completed") {
+      console.log("COMPLETION TRANSACTION SUCCESSFUL:", item.id);
+    }
+
+    await handleLoadQueue();
+
+    if (nextStatus === "completed") {
+      Alert.alert(
+        "Service Completed",
+        "Appointment completed. Its reserved time slots have been released."
+      );
+    }
+
+  } catch (e) {
+    console.error("TRANSACTION FAILED:", e.code, e.message);
+    console.error("Update queue status error:", e);
+
+    Alert.alert(
+      "Unable to Update Queue",
+      e.message || "Please try again."
+    );
+
+  } finally {
+    setUpdatingQueueId(null);
+  }
+}
+
 
 // OWNER: CONFIRM APPOINTMENT
 async function handleConfirmAppointment(item) {
@@ -751,12 +1065,15 @@ async function handleConfirmAppointment(item) {
         )
       );
 
-      setShops(
-        snap.docs.map(d => ({
+         const realShops = snap.docs.map(d => ({
           id: d.id,
-          ...d.data()
-        }))
-      );
+          ...d.data(),
+          isDemo: false
+        }));
+
+        setShops([...realShops, ...DEMO_SHOPS]);
+
+
     } catch (e) {
       console.error("Load shops error:", e);
       Alert.alert("Unable to Load Shops", "Please check your connection.");
@@ -827,33 +1144,41 @@ function handleViewShopDetails(shop) {
 }
 
   // CUSTOMER: VIEW SHOP SERVICES
-  async function handleViewShopServices(shop) {
-    setSelectedShop(shop);
-    setCustomerServices([]);
-    setLoadingCustomerServices(true);
-    setScreen("customerServices");
+ async function handleViewShopServices(shop) {
+  setSelectedShop(shop);
+  setCustomerServices([]);
+  setLoadingCustomerServices(true);
+  setScreen("customerServices");
 
-    try {
-      const q = query(
-        collection(db, "establishments", shop.id, "services"),
-        where("status", "==", "active")
-      );
-
-      const snap = await getDocs(q);
-
-      setCustomerServices(
-        snap.docs.map(d => ({
-          id: d.id,
-          ...d.data()
-        }))
-      );
-    } catch (e) {
-      console.error("View shop services error:", e);
-      Alert.alert("Unable to Load Services", "Check Firestore rules.");
-    } finally {
-      setLoadingCustomerServices(false);
-    }
+  // DEMO SHOP: use static sample services
+  if (shop.isDemo) {
+    setCustomerServices(shop.services || []);
+    setLoadingCustomerServices(false);
+    return;
   }
+
+  // REAL SHOP: load services from Firestore
+  try {
+    const q = query(
+      collection(db, "establishments", shop.id, "services"),
+      where("status", "==", "active")
+    );
+
+    const snap = await getDocs(q);
+
+    setCustomerServices(
+      snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }))
+    );
+  } catch (e) {
+    console.error("View shop services error:", e);
+    Alert.alert("Unable to Load Services", "Check Firestore rules.");
+  } finally {
+    setLoadingCustomerServices(false);
+  }
+}
 
   // OWNER: SAVE SERVICE
   async function handleSaveService() {
@@ -1026,115 +1351,132 @@ function handleViewShopDetails(shop) {
 
   // CUSTOMER: START BOOKING
   function handleStartBooking(item) {
-    setSelectedService(item);
-    setAppointmentDate("");
-    setAppointmentTime("");
-    setAvailableSlots([]);
-    setScreen("bookAppointment");
+  if (selectedShop?.isDemo) {
+    Alert.alert(
+      "Demo Shop",
+      "This is a sample shop. Actual bookings are only available for registered shops."
+    );
+    return;
   }
+
+  setSelectedService(item);
+  setAppointmentDate("");
+  setAppointmentTime("");
+  setAvailableSlots([]);
+  setOccupiedSlots([]);
+  setScreen("bookAppointment");
+}
 
   // CUSTOMER: LOAD AVAILABLE TIME SLOTS
-  async function handleLoadAvailableSlots(dateString) {
-    if (!selectedShop?.id || !selectedService) return;
+ // CUSTOMER: LOAD AVAILABLE AND OCCUPIED TIME SLOTS
+async function handleLoadAvailableSlots(dateString) {
+  if (!selectedShop?.id || !selectedService) return;
 
-    setLoadingSlots(true);
-    setAvailableSlots([]);
-    setAppointmentTime("");
+  setLoadingSlots(true);
+  setAvailableSlots([]);
+  setOccupiedSlots([]);
+  setAppointmentTime("");
 
-    try {
-      const date = dateFromString(dateString);
-      const dayName = WEEKDAYS[date.getDay()];
+  try {
+    const date = dateFromString(dateString);
+    const dayName = WEEKDAYS[date.getDay()];
 
-      const shopSnap = await getDoc(
-        doc(db, "establishments", selectedShop.id)
+    const shopSnap = await getDoc(
+      doc(db, "establishments", selectedShop.id)
+    );
+
+    const shop = shopSnap.exists() ? shopSnap.data() : selectedShop;
+    const hours = shop.operatingHours?.[dayName];
+
+    if (!hours?.open) {
+      Alert.alert(
+        "Shop Closed",
+        `The shop is closed on ${dayName}. Choose another date.`
+      );
+      return;
+    }
+
+    if (!hours.openingTime || !hours.closingTime) {
+      Alert.alert(
+        "Schedule Missing",
+        "The shop owner needs to save opening and closing times."
+      );
+      return;
+    }
+
+    const [oh, om] = hours.openingTime.split(":").map(Number);
+    const [ch, cm] = hours.closingTime.split(":").map(Number);
+
+    const open = oh * 60 + om;
+    const close = ch * 60 + cm;
+
+    const duration = Math.max(
+      30,
+      Number(selectedService.durationMinutes) || 30
+    );
+
+    const available = [];
+    const occupied = [];
+
+    for (let start = open; start + duration <= close; start += 30) {
+      const slotDate = new Date(date);
+
+      slotDate.setHours(
+        Math.floor(start / 60),
+        start % 60,
+        0,
+        0
       );
 
-      const shop = shopSnap.exists() ? shopSnap.data() : selectedShop;
-      const hours = shop.operatingHours?.[dayName];
+      if (slotDate <= new Date()) continue;
 
-      if (!hours?.open) {
-        Alert.alert(
-          "Shop Closed",
-          `The shop is closed on ${dayName}. Choose another date.`
-        );
-        return;
-      }
+      const startTime =
+        `${String(Math.floor(start / 60)).padStart(2, "0")}:` +
+        `${String(start % 60).padStart(2, "0")}`;
 
-      if (!hours.openingTime || !hours.closingTime) {
-        Alert.alert(
-          "Schedule Missing",
-          "The shop owner needs to save opening and closing times."
-        );
-        return;
-      }
+      const lockTimes = makeSlotLockTimes(startTime, duration);
 
-      const [oh, om] = hours.openingTime.split(":").map(Number);
-      const [ch, cm] = hours.closingTime.split(":").map(Number);
-
-      const open = oh * 60 + om;
-      const close = ch * 60 + cm;
-
-      const duration = Math.max(
-        30,
-        Number(selectedService.durationMinutes) || 30
-      );
-
-      const slots = [];
-
-      for (let start = open; start + duration <= close; start += 30) {
-        const slotDate = new Date(date);
-
-        slotDate.setHours(
-          Math.floor(start / 60),
-          start % 60,
-          0,
-          0
-        );
-
-        if (slotDate <= new Date()) continue;
-
-        const startTime =
-          `${String(Math.floor(start / 60)).padStart(2, "0")}:` +
-          `${String(start % 60).padStart(2, "0")}`;
-
-        const lockTimes = makeSlotLockTimes(startTime, duration);
-
-        const lockSnapshots = await Promise.all(
-          lockTimes.map(time =>
-            getDoc(
-              doc(
-                db,
-                "slotLocks",
-                makeSlotLockId(selectedShop.id, dateString, time)
-              )
+      const lockSnapshots = await Promise.all(
+        lockTimes.map(time =>
+          getDoc(
+            doc(
+              db,
+              "slotLocks",
+              makeSlotLockId(selectedShop.id, dateString, time)
             )
           )
-        );
-
-        if (lockSnapshots.every(snap => !snap.exists())) {
-          slots.push(startTime);
-        }
-      }
-
-      setAvailableSlots(slots);
-
-      if (slots.length === 0) {
-        Alert.alert(
-          "No Available Times",
-          "No available slots for this date. Choose another date."
-        );
-      }
-    } catch (e) {
-      console.error("Load available slots error:", e);
-
-      Alert.alert(
-        "Unable to Load Times",
-        `${e.code || ""} ${e.message || "Check Firestore rules and shop schedule."}`
+        )
       );
-    } finally {
-      setLoadingSlots(false);
+
+      if (lockSnapshots.some(snap => snap.exists())) {
+        occupied.push(startTime);
+      } else {
+        available.push(startTime);
+      }
     }
+
+    setAvailableSlots(available);
+    setOccupiedSlots(occupied);
+
+    if (available.length === 0 && occupied.length === 0) {
+      Alert.alert(
+        "No Available Times",
+        "No appointment times are available for this date."
+      );
+    }
+
+  } catch (e) {
+    console.error("Load time slots error:", e);
+
+    Alert.alert(
+      "Unable to Load Times",
+      `${e.code || ""} ${e.message || "Check Firestore rules and shop schedule."}`
+    );
+
+  } finally {
+    setLoadingSlots(false);
   }
+}
 
   // CUSTOMER: BOOK APPOINTMENT
   async function handleBookAppointment() {
@@ -1145,6 +1487,14 @@ function handleViewShopDetails(shop) {
       );
       return;
     }
+
+    if (selectedShop?.isDemo) {
+  Alert.alert(
+    "Demo Shop",
+    "This is a sample shop. Actual bookings are only available for registered shops."
+  );
+  return;
+}
 
     if (
       !appointmentDate ||
@@ -1408,7 +1758,7 @@ if (screen === "customerDashboard" && currentUser) {
 </Text>
   </View>
 ) : (
-  shops.slice(0, 3).map(shop => (
+  filteredShops.slice(0, 3).map(shop => (
     <View style={styles.homeShopCard} key={shop.id}>
       <View style={{ flex: 1 }}>
         <Text style={styles.shopName}>
@@ -1459,76 +1809,331 @@ if (screen === "customerDashboard" && currentUser) {
 }
 
   // CUSTOMER MY APPOINTMENTS
-  if (screen === "myAppointments" && currentUser?.role === "customer") {
-    return page(
-      <>
-        {header("My Appointments")}
+if (screen === "myAppointments" && currentUser?.role === "customer") {
+  const filters = [
+    "All",
+    "Upcoming",
+    "In Progress",
+    "Completed",
+    "Cancelled"
+  ];
 
-        {loadingAppointments ? (
-          loader
-        ) : myAppointments.length === 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.detail}>
-              You don't have any appointments yet.
-            </Text>
-          </View>
-        ) : (
-          myAppointments.map(item => (
-            <View style={styles.shopCard} key={item.id}>
+  const getStatusColor = status => {
+    switch ((status || "pending").toLowerCase()) {
+      case "pending":
+        return "#E6A23C";
+      case "confirmed":
+        return "#3B82F6";
+      case "inqueue":
+        return "#A78BFA";
+      case "inservice":
+        return "#F59E0B";
+      case "completed":
+        return "#22C55E";
+      case "cancelled":
+        return "#EF4444";
+      default:
+        return "#9CA3AF";
+    }
+  };
+
+  return page(
+    <>
+      {header("My Appointments")}
+
+ <View style={styles.card}>
+  <Text style={styles.sectionTitle}>
+    Appointment Summary
+  </Text>
+
+  <Text style={styles.detail}>
+    Overview of your bookings
+  </Text>
+
+  <View style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 15
+  }}>
+    {[
+      {
+        label: "Total",
+        value: appointmentSummary.total,
+        color: "#D4AF37"
+      },
+      {
+        label: "Upcoming",
+        value: appointmentSummary.upcoming,
+        color: "#3B82F6"
+      },
+      {
+        label: "In Progress",
+        value: appointmentSummary.inProgress,
+        color: "#A78BFA"
+      },
+      {
+        label: "Completed",
+        value: appointmentSummary.completed,
+        color: "#22C55E"
+      },
+      {
+        label: "Cancelled",
+        value: appointmentSummary.cancelled,
+        color: "#EF4444"
+      }
+    ].map(item => (
+      <View
+        key={item.label}
+        style={{
+          width: "30%",
+          minWidth: 90,
+          backgroundColor: "#252525",
+          borderRadius: 12,
+          padding: 12,
+          borderLeftWidth: 3,
+          borderLeftColor: item.color
+        }}
+      >
+        <Text style={{
+          color: item.color,
+          fontSize: 22,
+          fontWeight: "bold"
+        }}>
+          {item.value}
+        </Text>
+
+        <Text style={{
+          color: "#DDD",
+          fontSize: 11,
+          marginTop: 4
+        }}>
+          {item.label}
+        </Text>
+      </View>
+    ))}
+  </View>
+</View>
+
+      {loadingAppointments ? (
+        loader
+      ) : filteredMyAppointments.length === 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>
+            No Appointments Found
+          </Text>
+
+          <Text style={styles.detail}>
+            There are no appointments under the {appointmentFilter} category.
+          </Text>
+        </View>
+      ) : (
+        filteredMyAppointments.map(item => (
+          <View
+            style={styles.shopCard}
+            key={item.id}
+          >
+            <View style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12
+            }}>
               <Text style={styles.shopName}>
                 {item.shopName || "Shop"}
               </Text>
 
-              <Text style={styles.detail}>
-                Service: {item.serviceName || "Not specified"}
-              </Text>
+              <View style={{
+                backgroundColor: getStatusColor(item.status),
+                paddingVertical: 5,
+                paddingHorizontal: 9,
+                borderRadius: 12
+              }}>
+                <Text style={{
+                  color: "#111",
+                  fontSize: 10,
+                  fontWeight: "bold"
+                }}>
+                  {(item.status || "pending").toUpperCase()}
+                </Text>
+              </View>
+            </View>
 
-              <Text style={styles.detail}>
-                Date: {item.date || "Not specified"}
-              </Text>
+            <Text style={styles.detail}>
+              Service: {item.serviceName || "Not specified"}
+            </Text>
 
-              <Text style={styles.detail}>
-                Time: {formatTime(item.time)}
-              </Text>
+            <Text style={styles.detail}>
+              Date: {item.date || "Not specified"}
+            </Text>
 
-              <Text style={styles.detail}>
-                Price: ₱{Number(item.price || 0).toFixed(2)}
-              </Text>
+            <Text style={styles.detail}>
+              Time: {formatTime(item.time)}
+            </Text>
 
-              <Text style={styles.detail}>
-                Booking Reference: {item.id}
-              </Text>
+            <Text style={styles.detail}>
+              Price: ₱{Number(item.price || 0).toFixed(2)}
+            </Text>
 
-              <Text style={styles.detail}>
-                Status: {(item.status || "pending").toUpperCase()}
-              </Text>
+            <View style={{
+              height: 1,
+              backgroundColor: "#444",
+              marginVertical: 12
+            }} />
 
-              {["pending", "confirmed"].includes(item.status) &&
-                button(
+            <Text style={{
+              color: "#999",
+              fontSize: 11
+            }}>
+              Booking Reference
+            </Text>
+
+            <Text style={{
+              color: "#D4AF37",
+              fontSize: 11,
+              marginTop: 4
+            }}>
+              {item.id}
+            </Text>
+
+            {button(
+            "VIEW DETAILS",
+            () => handleViewAppointmentDetails(item),
+            true
+          )}
+
+            {["pending", "confirmed"].includes(
+              (item.status || "").toLowerCase()
+            ) && (
+              <View style={{ marginTop: 14 }}>
+                {button(
                   "CANCEL APPOINTMENT",
                   () => handleCancelAppointment(item),
                   true,
                   loadingAppointments
                 )}
-            </View>
-          ))
-        )}
+              </View>
+            )}
+          </View>
+        ))
+      )}
+
+      {button(
+        "REFRESH APPOINTMENTS",
+        handleLoadMyAppointments,
+        true,
+        loadingAppointments
+      )}
+
+      {button(
+        "BACK TO DASHBOARD",
+        () => setScreen("customerDashboard"),
+        true
+      )}
+    </>
+  );
+}
+
+// CUSTOMER APPOINTMENT DETAILS
+if (screen === "appointmentDetails" && currentUser?.role === "customer") {
+  const item = selectedAppointment;
+
+  if (!item) {
+    return page(
+      <>
+        {header("Appointment Details")}
+        <Text style={styles.detail}>Appointment not found.</Text>
 
         {button(
-          "REFRESH APPOINTMENTS",
+          "BACK TO APPOINTMENTS",
           handleLoadMyAppointments,
-          true,
-          loadingAppointments
-        )}
-
-        {button(
-          "BACK TO DASHBOARD",
-          () => setScreen("customerDashboard"),
           true
         )}
       </>
     );
   }
+
+  const status = (item.status || "pending").toLowerCase();
+
+  return page(
+    <>
+      {header("Appointment Details")}
+
+      <View style={styles.shopProfileCard}>
+        <Text style={styles.shopProfileIcon}>✂️</Text>
+
+        <Text style={styles.shopProfileName}>
+          {item.shopName || "Shop"}
+        </Text>
+
+        <Text style={styles.shopProfileType}>
+          {status.toUpperCase()}
+        </Text>
+      </View>
+
+      <View style={styles.shopDetailsCard}>
+        <Text style={styles.sectionTitle}>Service Information</Text>
+
+        <Text style={styles.shopDetailText}>
+          Service: {item.serviceName || "Not specified"}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Price: ₱{Number(item.price || 0).toFixed(2)}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Duration: {item.durationMinutes || 30} minutes
+        </Text>
+      </View>
+
+      <View style={styles.shopDetailsCard}>
+        <Text style={styles.sectionTitle}>Appointment Schedule</Text>
+
+        <Text style={styles.shopDetailText}>
+          Date: {item.date || "Not specified"}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Time: {formatTime(item.time)}
+        </Text>
+      </View>
+
+      <View style={styles.shopDetailsCard}>
+        <Text style={styles.sectionTitle}>Booking Information</Text>
+
+        <Text style={styles.shopDetailText}>
+          Customer: {item.customerName || currentUser.name}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Booking Reference:
+        </Text>
+
+        <Text style={{ color: "#D9AE55", fontSize: 12 }}>
+          {item.id}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Status: {status.toUpperCase()}
+        </Text>
+      </View>
+
+      {["pending", "confirmed"].includes(status) &&
+        button(
+          "CANCEL APPOINTMENT",
+          () => handleCancelAppointment(item),
+          true
+        )}
+
+      {button(
+        "BACK TO MY APPOINTMENTS",
+        handleLoadMyAppointments,
+        true
+      )}
+    </>
+  );
+}
 
    // CUSTOMER SHOP LIST
   if (screen === "shopList" && currentUser) {
@@ -1572,7 +2177,7 @@ if (screen === "customerDashboard" && currentUser) {
 
         {loadingShops ? (
           loader
-        ) : shops.length === 0 ? (
+        ) : filteredShops.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🏪</Text>
             <Text style={styles.emptyTitle}>No Shops Available</Text>
@@ -1592,9 +2197,15 @@ if (screen === "customerDashboard" && currentUser) {
                   {shop.name || "Unnamed Shop"}
                 </Text>
 
-                <Text style={styles.modernShopType}>
-                  {shop.type || "Barbershop / Salon"}
-                </Text>
+                   <Text style={styles.modernShopType}>
+                    {shop.type || "Barbershop / Salon"}
+                   </Text>
+
+                  {shop.isDemo && (
+                  <Text style={{ color: "#B8860B", fontWeight: "bold", marginTop: 4 }}>
+                    DEMO SHOP • SAMPLE ONLY
+                  </Text>
+                   )}
 
                 <Text style={styles.modernShopDetail}>
                   📍 {shop.address || "Address not provided"}
@@ -1647,6 +2258,7 @@ if (screen === "shopDetails" && currentUser) {
       {header("Shop Details")}
 
       <View style={styles.shopProfileCard}>
+
         <Text style={styles.shopProfileIcon}>✂️</Text>
 
         <Text style={styles.shopProfileName}>
@@ -1657,6 +2269,12 @@ if (screen === "shopDetails" && currentUser) {
           {selectedShop?.type || "Barbershop / Salon"}
         </Text>
       </View>
+
+            {selectedShop?.isDemo && (
+        <Text style={{ color: "#B8860B", fontWeight: "bold", marginTop: 6 }}>
+              DEMO SHOP • SAMPLE ONLY
+        </Text>
+        )}
 
       <View style={styles.shopDetailsCard}>
         <Text style={styles.sectionTitle}>Contact Information</Text>
@@ -1725,6 +2343,12 @@ if (screen === "shopDetails" && currentUser) {
           <Text style={styles.shopProfileType}>
             {selectedShop?.type || "Barbershop / Salon"}
           </Text>
+
+                {selectedShop?.isDemo && (
+        <Text style={{ color: "#B8860B", fontWeight: "bold", marginTop: 6 }}>
+               DEMO SHOP • SAMPLE ONLY
+            </Text>
+            )}
 
           <Text style={styles.shopProfileDetail}>
             📍 {selectedShop?.address || "Not provided"}
@@ -1851,55 +2475,90 @@ if (screen === "shopDetails" && currentUser) {
             </Text>
           </TouchableOpacity>
 
-          {datePickerVisible && (
-            <DateTimePicker
-              mode="date"
-              value={dateFromString(appointmentDate)}
-              minimumDate={new Date()}
-              onChange={(event, selected) => {
-                setDatePickerVisible(false);
+       
+{datePickerVisible && (
+  <DateTimePicker
+    mode="date"
+    value={dateFromString(appointmentDate)}
+    minimumDate={new Date()}
+    onChange={(event, selectedDate) => {
+      setDatePickerVisible(false);
 
-                if (event.type !== "set" || !selected) return;
+      if (event.type !== "set" || !selectedDate) return;
 
-                const value = formatDate(selected);
+      const value = formatDate(selectedDate);
 
-                setAppointmentDate(value);
-                handleLoadAvailableSlots(value);
-              }}
-            />
-          )}
+      setAppointmentDate(value);
+      handleLoadAvailableSlots(value);
+    }}
+  />
+)}
 
-          <Text style={styles.label}>Available Time Slots</Text>
 
-          {!appointmentDate ? (
-            <Text style={styles.hint}>
-              Select a date first to see available times.
-            </Text>
-          ) : loadingSlots ? (
-            loader
-          ) : availableSlots.length === 0 ? (
-            <Text style={styles.hint}>
-              No available times. Try another date or check the shop schedule.
-            </Text>
-          ) : (
-            <View style={styles.choiceRowWrap}>
-              {availableSlots.map(slot => (
-                <TouchableOpacity
-                  key={slot}
-                  style={[
-                    styles.choiceButton,
-                    styles.slotButton,
-                    appointmentTime === slot && styles.choiceSelected
-                  ]}
-                  onPress={() => setAppointmentTime(slot)}
-                >
-                  <Text style={styles.choiceText}>
-                    {formatTime(slot)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+        <Text style={styles.label}>Appointment Time Slots</Text>
+
+<View style={styles.slotLegend}>
+  <View style={styles.legendItem}>
+    <View style={styles.availableDot} />
+    <Text style={styles.hint}>Available</Text>
+  </View>
+
+  <View style={styles.legendItem}>
+    <View style={styles.occupiedDot} />
+    <Text style={styles.hint}>Occupied</Text>
+  </View>
+</View>
+
+{!appointmentDate ? (
+  <Text style={styles.hint}>
+    Select a date first to see appointment times.
+  </Text>
+) : loadingSlots ? (
+  loader
+) : availableSlots.length === 0 && occupiedSlots.length === 0 ? (
+  <Text style={styles.hint}>
+    No appointment times available. Try another date.
+  </Text>
+) : (
+  <View style={styles.choiceRowWrap}>
+
+    {availableSlots.map(slot => (
+      <TouchableOpacity
+        key={slot}
+        style={[
+          styles.choiceButton,
+          styles.slotButton,
+          styles.availableSlot,
+          appointmentTime === slot && styles.choiceSelected
+        ]}
+        onPress={() => setAppointmentTime(slot)}
+      >
+        <Text style={styles.choiceText}>
+          {formatTime(slot)}
+        </Text>
+        <Text style={styles.slotStatusText}>Available</Text>
+      </TouchableOpacity>
+    ))}
+
+    {occupiedSlots.map(slot => (
+      <TouchableOpacity
+        key={slot}
+        style={[
+          styles.choiceButton,
+          styles.slotButton,
+          styles.occupiedSlot
+        ]}
+        disabled={true}
+      >
+        <Text style={styles.choiceText}>
+          {formatTime(slot)}
+        </Text>
+        <Text style={styles.slotStatusText}>Booked</Text>
+      </TouchableOpacity>
+    ))}
+
+  </View>
+)}
 
           <Text style={styles.hint}>
             Your request remains pending until the shop confirms it.
@@ -1922,6 +2581,238 @@ if (screen === "shopDetails" && currentUser) {
       </>
     );
   }
+
+  // OWNER APPOINTMENT DETAILS
+if (
+  screen === "ownerAppointmentDetails" &&
+  currentUser?.role === "owner"
+) {
+  const item = selectedAppointment;
+
+  if (!item || item.establishmentId !== currentUser.uid) {
+    return page(
+      <>
+        {header("Appointment Details")}
+
+        <Text style={styles.detail}>
+          Appointment not found or access denied.
+        </Text>
+
+        {button(
+          "BACK TO PENDING APPOINTMENTS",
+          handleLoadOwnerAppointments,
+          true
+        )}
+      </>
+    );
+  }
+
+  const status = (item.status || "pending").toLowerCase();
+
+  return page(
+    <>
+      {header("Appointment Details")}
+
+      <View style={styles.shopProfileCard}>
+        <Text style={styles.shopProfileIcon}>📅</Text>
+
+        <Text style={styles.shopProfileName}>
+          {item.customerName || "Customer"}
+        </Text>
+
+        <Text style={styles.shopProfileType}>
+          {status.toUpperCase()}
+        </Text>
+      </View>
+
+      <View style={styles.shopDetailsCard}>
+        <Text style={styles.sectionTitle}>
+          Customer Information
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Name: {item.customerName || "Not provided"}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Email: {item.customerEmail || "Not provided"}
+        </Text>
+      </View>
+
+      <View style={styles.shopDetailsCard}>
+        <Text style={styles.sectionTitle}>
+          Service Information
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Shop: {item.shopName || "Not specified"}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Service: {item.serviceName || "Not specified"}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Price: ₱{Number(item.price || 0).toFixed(2)}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Duration: {item.durationMinutes || 30} minutes
+        </Text>
+      </View>
+
+      <View style={styles.shopDetailsCard}>
+        <Text style={styles.sectionTitle}>
+          Appointment Schedule
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Date: {item.date || "Not specified"}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Time: {formatTime(item.time)}
+        </Text>
+      </View>
+
+      <View style={styles.shopDetailsCard}>
+        <Text style={styles.sectionTitle}>
+          Booking Information
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Booking Reference:
+        </Text>
+
+        <Text style={{
+          color: "#D9AE55",
+          fontSize: 12,
+          marginTop: 5
+        }}>
+          {item.id}
+        </Text>
+
+        <Text style={styles.shopDetailText}>
+          Status: {status.toUpperCase()}
+        </Text>
+      </View>
+
+      {status === "pending" &&
+        button(
+          confirmingAppointmentId === item.id
+            ? "CONFIRMING..."
+            : "CONFIRM APPOINTMENT",
+          () => handleConfirmAppointment(item),
+          false,
+          confirmingAppointmentId !== null
+        )}
+
+      {button(
+        "BACK TO PENDING APPOINTMENTS",
+        handleLoadOwnerAppointments,
+        true
+      )}
+    </>
+  );
+}
+
+// OWNER QUEUE MANAGEMENT
+if (screen === "ownerQueue" && currentUser?.role === "owner") {
+  return page(
+    <>
+      {header("Manage Queue")}
+
+      <Text style={styles.description}>
+        Manage confirmed appointments according to their scheduled date and time.
+      </Text>
+
+      {loadingQueue ? (
+        loader
+      ) : queueAppointments.length === 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.emptyTitle}>
+            No Customers in Queue
+          </Text>
+
+          <Text style={styles.emptyDescription}>
+            Confirmed appointments will appear here.
+          </Text>
+        </View>
+      ) : (
+        queueAppointments.map((item, index) => (
+          <View style={styles.shopCard} key={item.id}>
+            <Text style={styles.shopName}>
+              Queue #{index + 1} — {item.customerName || "Customer"}
+            </Text>
+
+            <Text style={styles.detail}>
+              Service: {item.serviceName || "Not specified"}
+            </Text>
+
+            <Text style={styles.detail}>
+              Date: {item.date || "Not specified"}
+            </Text>
+
+            <Text style={styles.detail}>
+              Time: {formatTime(item.time)}
+            </Text>
+
+            <Text style={styles.detail}>
+              Duration: {item.durationMinutes || 30} minutes
+            </Text>
+
+            <Text style={styles.detail}>
+              Status: {(item.status || "").toUpperCase()}
+            </Text>
+
+            {item.status === "confirmed" &&
+              button(
+                updatingQueueId === item.id
+                  ? "UPDATING..."
+                  : "ADD TO QUEUE",
+                () => handleUpdateQueueStatus(item, "inQueue"),
+                false,
+                updatingQueueId !== null
+              )}
+
+            {item.status === "inQueue" &&
+              button(
+                updatingQueueId === item.id
+                  ? "UPDATING..."
+                  : "START SERVICE",
+                () => handleUpdateQueueStatus(item, "inService"),
+                false,
+                updatingQueueId !== null
+              )}
+
+            {item.status === "inService" &&
+              button(
+                updatingQueueId === item.id
+                  ? "UPDATING..."
+                  : "MARK AS COMPLETED",
+                () => handleUpdateQueueStatus(item, "completed"),
+                false,
+                updatingQueueId !== null
+              )}
+          </View>
+        ))
+      )}
+
+      {button(
+        "REFRESH QUEUE",
+        handleLoadQueue,
+        true,
+        loadingQueue || updatingQueueId !== null
+      )}
+
+      {button(
+        "BACK TO DASHBOARD",
+        () => setScreen("ownerDashboard"),
+        true
+      )}
+    </>
+  );
+}
 
     // OWNER PENDING APPOINTMENTS
 if (screen === "ownerAppointments" && currentUser?.role === "owner") {
@@ -1979,6 +2870,12 @@ if (screen === "ownerAppointments" && currentUser?.role === "owner") {
             <Text style={styles.detail}>
               Status: PENDING
             </Text>
+
+              {button(
+              "VIEW DETAILS",
+              () => handleViewAppointmentDetails(item),
+                true
+              )}
 
             {button(
               confirmingAppointmentId === item.id
@@ -2285,10 +3182,17 @@ if (screen === "ownerAppointments" && currentUser?.role === "owner") {
             "MANAGE SHOP SCHEDULE",
             () => setScreen("manageSchedule")
           )}
-          {button(
-  "PENDING APPOINTMENTS",
-  handleLoadOwnerAppointments
-)}
+
+                  {button(
+          "PENDING APPOINTMENTS",
+          handleLoadOwnerAppointments
+        )}
+
+        {button(
+          "MANAGE QUEUE",
+          handleLoadQueue
+        )}
+
         </View>
 
         {button("LOG OUT", handleLogout, true)}
@@ -3117,6 +4021,49 @@ viewAll: {
     flexGrow: 0,
     flexBasis: "30%"
   },
+  availableSlot: {
+  backgroundColor: "#164D32",
+  borderColor: "#22C55E"
+},
+
+occupiedSlot: {
+  backgroundColor: "#5A2020",
+  borderColor: "#EF4444",
+  opacity: 0.8
+},
+
+slotLegend: {
+  flexDirection: "row",
+  gap: 20,
+  marginTop: 8,
+  marginBottom: 12
+},
+
+legendItem: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6
+},
+
+availableDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: "#22C55E"
+},
+
+occupiedDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: "#EF4444"
+},
+
+slotStatusText: {
+  color: "#FFFFFF",
+  fontSize: 10,
+  marginTop: 4
+},
 
   choiceSelected: {
     backgroundColor: "#6B5428",
