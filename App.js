@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   Linking,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ImageBackground
 } from "react-native";
  
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -253,6 +254,9 @@ const makeSlotLockTimes = (startTime, durationMinutes) => {
 export default function App() {
  
   const [screen, setScreen] = useState("login");
+  const [showRegistrationOptions, setShowRegistrationOptions] = useState(false);
+  const [showAboutUs, setShowAboutUs] = useState(false);
+  const [showOwnerAboutUs, setShowOwnerAboutUs] = useState(false);
   const [shopSearch, setShopSearch] = useState("");
   const [shopTypeFilter, setShopTypeFilter] = useState("All");
   const [sortByNearest, setSortByNearest] = useState(false);
@@ -403,6 +407,7 @@ export default function App() {
  
   function goTo(next) {
     clearPasswords();
+    setShowRegistrationOptions(false);
     setScreen(next);
   }
  
@@ -690,6 +695,7 @@ async function handleLogin() {
       setMyAppointments([]);
       setEmail("");
       clearPasswords();
+      setShowRegistrationOptions(false);
       setScreen("login");
     } catch (e) {
       console.error("Logout error:", e);
@@ -1756,25 +1762,127 @@ async function handleLoadAvailableSlots(dateString) {
     );
   }
  
+  // CUSTOMER BOTTOM NAVIGATION
+  const renderCustomerNavigationBar = () => {
+    const navItem = (label, icon, active, onPress) => (
+      <TouchableOpacity
+        key={label}
+        style={[styles.navItem, active && styles.navItemActive]}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ selected: active }}
+        activeOpacity={0.8}
+      >
+        <View style={styles.navIconBox}>
+          <Text style={[styles.navIconSymbol, active && styles.navIconActive]}>
+            {icon}
+          </Text>
+        </View>
+        <Text style={[styles.navText, active && styles.navTextActive]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+ 
+    const shopScreens = ["shopList", "shopDetails", "customerServices", "bookAppointment"];
+    const appointmentScreens = ["myAppointments", "appointmentDetails"];
+ 
+    return (
+      <View style={styles.navBar}>
+        {navItem("Home", "⌂", screen === "customerDashboard", () => setScreen("customerDashboard"))}
+        {navItem("Shops", "✦", shopScreens.includes(screen), handleFindShops)}
+        {navItem("Bookings", "▤", appointmentScreens.includes(screen), handleLoadMyAppointments)}
+        {navItem("Profile", "◯", screen === "customerProfile", () => setScreen("customerProfile"))}
+      </View>
+    );
+  };
+ 
+  // SHOP OWNER BOTTOM NAVIGATION
+  const renderOwnerNavigationBar = () => {
+    const navItem = (label, icon, active, onPress) => (
+      <TouchableOpacity
+        key={label}
+        style={[styles.navItem, active && styles.navItemActive]}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ selected: active }}
+        activeOpacity={0.8}
+      >
+        <View style={styles.navIconBox}>
+          <Text style={[styles.navIconSymbol, active && styles.navIconActive]}>
+            {icon}
+          </Text>
+        </View>
+        <Text style={[styles.navText, active && styles.navTextActive]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+ 
+    return (
+      <View style={styles.navBar}>
+        {navItem("Dashboard", "⌂", screen === "ownerDashboard", () => setScreen("ownerDashboard"))}
+        {navItem("Services", "✦", screen === "manageServices", handleLoadServices)}
+        {navItem("Schedule", "◷", screen === "manageSchedule", () => setScreen("manageSchedule"))}
+        {navItem("Queue", "▤", screen === "ownerQueue", handleLoadQueue)}
+        {navItem("Profile", "◯", screen === "ownerProfile", () => setScreen("ownerProfile"))}
+      </View>
+    );
+  };
+ 
   // REUSABLE PAGE COMPONENT
+  // The login screen uses a barber-themed background. All authenticated screens
+  // share the role-specific bottom navigation bar.
   const page = children => (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[
-          styles.content,
-          { flexGrow: 1, paddingBottom: 100 }
-        ]}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        showsVerticalScrollIndicator={true}
-      >
-        {children}
-      </ScrollView>
+      <View style={styles.pageRoot}>
+        {screen === "login" ? (
+          <ImageBackground
+            source={{
+              uri: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200"
+            }}
+            style={styles.loginBackground}
+            resizeMode="cover"
+          >
+            <View style={styles.loginOverlay}>
+              <ScrollView
+                style={styles.loginScroll}
+                contentContainerStyle={[
+                  styles.content,
+                  { flexGrow: 1, paddingBottom: 40 }
+                ]}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={true}
+              >
+                {children}
+              </ScrollView>
+            </View>
+          </ImageBackground>
+        ) : (
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={[
+              styles.content,
+              { flexGrow: 1, paddingBottom: currentUser ? 135 : 100 }
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={true}
+          >
+            {children}
+          </ScrollView>
+        )}
+ 
+        {currentUser?.role === "customer" && renderCustomerNavigationBar()}
+        {currentUser?.role === "owner" && renderOwnerNavigationBar()}
+      </View>
     </KeyboardAvoidingView>
   );
  
@@ -1808,7 +1916,7 @@ async function handleLoadAvailableSlots(dateString) {
           <TouchableOpacity
             style={styles.customerProfileButtonV3}
             accessibilityRole="button"
-            onPress={() => Alert.alert("Profile", "Profile page coming soon.")}
+            onPress={() => setScreen("customerProfile")}
           >
             <Text style={styles.customerProfileIconV3}>👤</Text>
           </TouchableOpacity>
@@ -1822,22 +1930,22 @@ async function handleLoadAvailableSlots(dateString) {
     style={styles.customerHeroImageV3}
     resizeMode="cover"
   />
-
+ 
   <View style={styles.customerHeroOverlayV3} />
-
+ 
   <View style={styles.customerHeroContentV3}>
     <Text style={styles.customerHeroEyebrowV3}>
       YOUR NEXT LOOK STARTS HERE
     </Text>
-
+ 
     <Text style={styles.customerHeroTitleV3}>
       Look good.{"\n"}Wait less.
     </Text>
-
+ 
     <Text style={styles.customerHeroDescriptionV3}>
       Find a barbershop or salon, choose a service, and book your appointment.
     </Text>
-
+ 
     <TouchableOpacity
       style={styles.customerHeroButtonV3}
       accessibilityRole="button"
@@ -1926,12 +2034,116 @@ async function handleLoadAvailableSlots(dateString) {
           {button("MY APPOINTMENTS", handleLoadMyAppointments, true)}
           {button(
             "MY PROFILE",
-            () => Alert.alert("Profile", "Profile page coming soon."),
+            () => setScreen("customerProfile"),
             true
           )}
           {button("LOG OUT", handleLogout, true)}
         </View>
       </View>
+    );
+  }
+ 
+  // CUSTOMER PROFILE SCREEN
+  if (screen === "customerProfile" && currentUser?.role === "customer") {
+    return page(
+      <>
+        {header("My Profile")}
+ 
+        <View style={styles.profileRefContainer}>
+          <View style={styles.profileAvatarContainer}>
+            <Text style={styles.profileAvatarSymbol}>👤</Text>
+          </View>
+          <View style={styles.profileInfoContainer}>
+            <Text style={styles.profileNameText}>
+              {currentUser.name || "Customer"}
+            </Text>
+            <Text style={styles.profileStatusText}>Active Customer</Text>
+          </View>
+        </View>
+ 
+        <View style={styles.shopDetailsCard}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.shopDetailText}>Email: {currentUser.email || "Not provided"}</Text>
+          <Text style={styles.shopDetailText}>Age: {currentUser.age ?? "N/A"}</Text>
+          <Text style={styles.shopDetailText}>Role: Customer</Text>
+        </View>
+ 
+        {button(
+          showAboutUs ? "HIDE ABOUT US" : "ABOUT US",
+          () => setShowAboutUs(prev => !prev),
+          true
+        )}
+ 
+        {showAboutUs && (
+          <View style={[styles.shopDetailsCard, { marginTop: 15 }]}>
+            <Text style={styles.sectionTitle}>About QueLess</Text>
+            <Text style={styles.shopDetailText}>
+              <Text style={styles.aboutUsLabel}>Mission: </Text>
+              To streamline grooming appointments and reduce physical queues through simple and dependable digital booking.
+            </Text>
+            <Text style={[styles.shopDetailText, { marginTop: 10 }]}>
+              <Text style={styles.aboutUsLabel}>Vision: </Text>
+              To empower modern barbershops and salons while providing customers with convenient appointment management.
+            </Text>
+          </View>
+        )}
+ 
+        {button("BACK TO DASHBOARD", () => setScreen("customerDashboard"), true)}
+        {button("LOG OUT", handleLogout, true)}
+      </>
+    );
+  }
+ 
+  // OWNER PROFILE SCREEN
+  if (screen === "ownerProfile" && currentUser?.role === "owner") {
+    return page(
+      <>
+        {header("Owner Profile")}
+ 
+        <View style={styles.profileRefContainer}>
+          <View style={styles.profileAvatarContainer}>
+            <Text style={styles.profileAvatarSymbol}>💈</Text>
+          </View>
+          <View style={styles.profileInfoContainer}>
+            <Text style={styles.profileNameText}>
+              {currentUser.name || "Shop Owner"}
+            </Text>
+            <Text style={styles.profileStatusText}>Shop Owner</Text>
+          </View>
+        </View>
+ 
+        <View style={styles.shopDetailsCard}>
+          <Text style={styles.sectionTitle}>Personal and Shop Information</Text>
+          <Text style={styles.shopDetailText}>Email: {currentUser.email || "Not provided"}</Text>
+          <Text style={styles.shopDetailText}>Shop Name: {establishment?.name || "N/A"}</Text>
+          <Text style={styles.shopDetailText}>Shop Type: {establishment?.type || "N/A"}</Text>
+          <Text style={styles.shopDetailText}>Address: {establishment?.address || "N/A"}</Text>
+          <Text style={styles.shopDetailText}>Contact: {establishment?.contactNumber || "N/A"}</Text>
+        </View>
+ 
+        {button(
+          showOwnerAboutUs ? "HIDE ABOUT US" : "ABOUT US",
+          () => setShowOwnerAboutUs(prev => !prev),
+          true
+        )}
+ 
+        {showOwnerAboutUs && (
+          <View style={[styles.shopDetailsCard, { marginTop: 15 }]}>
+            <Text style={styles.sectionTitle}>About QueLess</Text>
+            <Text style={styles.shopDetailText}>
+              <Text style={styles.aboutUsLabel}>Mission: </Text>
+              To streamline grooming appointments and reduce physical queues through simple and dependable digital booking.
+            </Text>
+            <Text style={[styles.shopDetailText, { marginTop: 10 }]}>
+              <Text style={styles.aboutUsLabel}>Vision: </Text>
+              To empower modern barbershops and salons while providing customers with convenient appointment management.
+            </Text>
+          </View>
+        )}
+ 
+        {button("BACK TO DASHBOARD", () => setScreen("ownerDashboard"), true)}
+        {button("LOG OUT", handleLogout, true)}
+      </>
     );
   }
  
@@ -3420,16 +3632,37 @@ if (screen === "ownerAppointments" && currentUser?.role === "owner") {
           loading
         )}
  
-        {button(
-          "CREATE CUSTOMER ACCOUNT",
-          () => goTo("registerCustomer"),
-          true
-        )}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => setShowRegistrationOptions(prev => !prev)}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showRegistrationOptions }}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.buttonText}>
+            {showRegistrationOptions
+              ? "CLOSE REGISTRATION OPTIONS ▲"
+              : "REGISTER AN ACCOUNT ▼"}
+          </Text>
+        </TouchableOpacity>
  
-        {button(
-          "REGISTER AS SHOP OWNER",
-          () => goTo("registerOwner"),
-          true
+        {showRegistrationOptions && (
+          <>
+            {button(
+              "CREATE CUSTOMER ACCOUNT",
+              () => goTo("registerCustomer"),
+              true,
+              loading
+            )}
+ 
+            {button(
+              "REGISTER AS SHOP OWNER",
+              () => goTo("registerOwner"),
+              true,
+              loading
+            )}
+          </>
         )}
       </>
     );
@@ -3593,6 +3826,116 @@ if (screen === "ownerAppointments" && currentUser?.role === "owner") {
  
 // APP STYLES
 const styles = StyleSheet.create({
+  pageRoot: {
+    flex: 1,
+    position: "relative"
+  },
+  loginBackground: {
+    flex: 1,
+    width: "100%",
+    height: "100%"
+  },
+  loginOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 15, 15, 0.72)"
+  },
+  loginScroll: {
+    flex: 1,
+    backgroundColor: "transparent"
+  },
+  navBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: Platform.OS === "ios" ? 88 : 76,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 20 : 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    backgroundColor: "#1C1C1C",
+    borderTopWidth: 1,
+    borderTopColor: "#594725",
+    zIndex: 20,
+    elevation: 12
+  },
+  navItem: {
+    flex: 1,
+    height: 58,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 3,
+    borderRadius: 10
+  },
+  navItemActive: {
+    backgroundColor: "#302719"
+  },
+  navIconBox: {
+    width: 30,
+    height: 29,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  navIconSymbol: {
+    color: "#A98945",
+    fontSize: 22,
+    fontWeight: "bold"
+  },
+  navIconActive: {
+    color: "#F0C66A"
+  },
+  navText: {
+    color: "#B7A47C",
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2
+  },
+  navTextActive: {
+    color: "#F0C66A"
+  },
+  profileRefContainer: {
+    backgroundColor: "#252525",
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 15,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#444444"
+  },
+  profileAvatarContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#40331E",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: "#D9AE55"
+  },
+  profileAvatarSymbol: {
+    fontSize: 27
+  },
+  profileInfoContainer: {
+    flex: 1
+  },
+  profileNameText: {
+    color: "#FFFFFF",
+    fontSize: 19,
+    fontWeight: "bold"
+  },
+  profileStatusText: {
+    color: "#D9AE55",
+    fontSize: 13,
+    marginTop: 4
+  },
+  aboutUsLabel: {
+    fontWeight: "bold",
+    color: "#D9AE55"
+  },
  
   shopDetailsCard: {
   backgroundColor: "#252525",
@@ -4381,8 +4724,8 @@ customerHeroOverlayV3: {
   zIndex: 1,
   elevation: 1
 },
-
-
+ 
+ 
   customerHeroEyebrowV3: {
     color: "#D9AE55",
     fontSize: 10,
